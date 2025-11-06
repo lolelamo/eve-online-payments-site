@@ -1,0 +1,22 @@
+{
+  "config": {
+    "levelValues": {},
+    "hasSalvager": false,
+    "salvagerPercent": 10,
+    "currency": "ISK",
+    "autoCalculate": true
+  },
+  "members": [
+    {
+      "name": "asd",
+      "isSalvager": false,
+      "id": 1762439407919
+    },
+    {
+      "name": "ads",
+      "isSalvager": false,
+      "id": 1762439407915
+    }
+  ],
+  "sites": []
+}

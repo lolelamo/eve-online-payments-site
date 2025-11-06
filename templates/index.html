@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Pagos EVE Online</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div>Cargando...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Sistema de Pagos EVE Online</h1>
+            <p>Gestión automática de distribución de ISK por sitios</p>
+            <div class="header-badges">
+                <div class="badge active" id="autoCalcIndicator">
+                    Cálculo Automático
+                </div>
+                <div class="badge" id="dataStatus">
+                    Guardado
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="config">
+                Configuración
+            </button>
+            <button class="tab" data-tab="members">
+                Miembros
+                <span class="tab-badge" id="memberBadge">0</span>
+            </button>
+            <button class="tab" data-tab="sites">
+                Sitios
+                <span class="tab-badge" id="siteBadge">0</span>
+            </button>
+        </div>
+        
+        <div class="content">
+            <div class="main-content">
+                <!-- TAB 1: CONFIGURATION -->
+                <div id="config" class="tab-content active">
+                    <div class="section">
+                        <h2>Valores por Sitio </h2>
+                        <div class="alert">
+                            <strong>💡 Consejo:</strong> Define cuánto ISK vale cada Sitio (1-10).
+                        </div>
+                        <div class="level-grid" id="levelValues"></div>
+                        <div class="btn-group">
+                            <button class="btn" id="saveConfigBtn">💾 Guardar Configuración</button>
+                            <button class="btn btn-secondary" id="resetLevelsBtn">Restaurar Valores por Defecto</button>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2> Configuración de Salvager</h2>
+                        <div class="input-field">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="hasSalvager">
+                                <span>Hay un salvager que recibe porcentaje extra</span>
+                            </label>
+                        </div>
+                        <div class="input-field" style="margin-top: 15px;">
+                            <label>Porcentaje del salvager (%)</label>
+                            <input type="number" id="salvagerPercent" value="10" min="0" max="100" disabled>
+                            <small style="color: #ccc; margin-top: 5px;">Este porcentaje se distribuye entre todos los salvagers presentes</small>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Opciones Generales</h2>
+                        <div class="input-field">
+                            <label>Moneda</label>
+                            <input type="text" id="currency" value="ISK" placeholder="ISK">
+                        </div>
+                        <div class="input-field" style="margin-top: 15px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="autoCalculate" checked>
+                                <span>Calcular pagos automáticamente al agregar sitios</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Importar/Exportar Datos</h2>
+                        <div class="btn-group">
+                            <button class="btn" id="exportBtn">Exportar Datos</button>
+                            <button class="btn btn-secondary" id="importBtn">Importar Datos</button>
+                            <input type="file" id="importFile" accept=".json" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TAB 2: MEMBERS -->
+                <div id="members" class="tab-content">
+                    <form class="section" id="memberForm">
+                        <h2>Agregar Miembro</h2>
+                        <div class="input-group">
+                            <div class="input-field">
+                                <label>Nombre del Miembro</label>
+                                <input type="text" id="memberName" placeholder="Nombre del piloto o múltiples (separados por coma)" autocomplete="off">
+                                <small style="color: #ccc; margin-top: 5px;">Puedes agregar múltiples nombres separados por comas</small>
+                            </div>
+                            <div class="input-field">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="isSalvager">
+                                    <span>Es salvager</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn">Agregar Miembro</button>
+                    </form>
+                    
+                    <div class="section">
+                        <h2>Lista de Miembros (<span id="memberCount">0</span>)</h2>
+                        <div id="membersList"></div>
+                    </div>
+                </div>
+                
+                <!-- TAB 3: SITES -->
+                <div id="sites" class="tab-content">
+                    <div class="section">
+                        <h2>Registrar Sitio</h2>
+                        
+                        <div id="noMembersWarning" class="alert alert-warning" style="display: none;">
+                            <strong>Atención:</strong> Primero debes agregar miembros en la pestaña "Miembros".
+                        </div>
+                        
+                        <div class="input-group">
+                            <div class="input-field">
+                                <label>Nombre del Sitio</label>
+                                <input type="text" id="siteName" placeholder="Ej: Sanctum #1">
+                            </div>
+                            <div class="input-field">
+                                <label>Sitio (1-10)</label>
+                                <input type="number" id="siteLevel" min="1" max="10" value="1">
+                            </div>
+                        </div>
+                        
+                        <h3>Participantes</h3>
+                        <div class="select-all-controls">
+                            <button class="btn btn-secondary" id="selectAllBtn">Seleccionar Todos</button>
+                            <button class="btn btn-secondary" id="deselectAllBtn">Deseleccionar Todos</button>
+                        </div>
+                        <div class="participant-grid" id="participantCheckboxes"></div>
+                        
+                        <div class="btn-group">
+                            <button class="btn" id="addSiteBtn">Registrar Sitio</button>
+                            <button class="btn btn-secondary" id="clearSiteFormBtn">Limpiar Formulario</button>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Sitios Registrados (<span id="siteCount">0</span>)</h2>
+                        <div class="quick-actions">
+                            <button class="btn btn-danger" id="clearAllSitesBtn">Limpiar Todos los Sitios</button>
+                        </div>
+                        <div id="sitesList"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SIDEBAR SUMMARY OF PAYMENTS -->
+            <div class="sidebar">
+                <h2>Resumen de Pagos</h2>
+                
+                <div class="stats-card">
+                    <h3>Total a Distribuir</h3>
+                    <div class="value" id="totalPaid">0 ISK</div>
+                </div>
+                
+                <div class="stats-card">
+                    <h3>Sitios Completados</h3>
+                    <div class="value" id="totalSites">0</div>
+                </div>
+                
+                <div class="stats-card">
+                    <h3>Promedio por Sitio</h3>
+                    <div class="value" id="avgPerSite">0 ISK</div>
+                </div>
+                
+                <h3 style="margin: 20px 0 10px 0; color: #4a9eff;">Pagos por Miembro</h3>
+                <div id="paymentsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/script.js"></script>
+</body>
+</html>
