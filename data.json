@@ -64,6 +64,17 @@
     },
     "salvagerPercent": 10
   },
-  "members": [],
+  "members": [
+    {
+      "name": "lolewe",
+      "isSalvager": false,
+      "id": 1762529499967
+    },
+    {
+      "name": "ABC",
+      "isSalvager": false,
+      "id": 1762529499725
+    }
+  ],
   "sites": []
 }

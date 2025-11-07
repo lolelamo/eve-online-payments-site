@@ -705,6 +705,8 @@ function setupEventListeners() {
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
     logAction('APP_INITIALIZATION_START');
+    console.log('%c⚠️ SECURITY LOG ENABLED ⚠️', 'color: #ff6b6b; font-size: 16px; font-weight: bold;');
+    console.log('%cTodas las acciones del usuario están siendo registradas para seguridad.', 'color: #ffc107; font-size: 12px;');
     
     setupEventListeners();
     loadData();

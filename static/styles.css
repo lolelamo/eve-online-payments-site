@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(#0f1220, #03050e 0%, #0d0f1d 100%);
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
     padding: 20px;
     min-height: 100vh;
     color: #e0e0e0;
@@ -22,12 +22,12 @@ body {
 }
 
 .header {
-    background: linear-gradient(135deg, #1d223f 0%, #161b31 100%);
+    background: linear-gradient(135deg, #2d3561 0%, #1f2544 100%);
     color: #ffffff;
     padding: 30px;
     text-align: center;
     position: relative;
-    border-bottom: 2px solid #282c44;
+    border-bottom: 2px solid #3a4063;
 }
 
 .header h1 {
@@ -203,7 +203,7 @@ body {
 }
 
 .input-field input, .input-field select {
-    padding: 13px;
+    padding: 12px;
     border: 2px solid #3a4063;
     border-radius: 5px;
     font-size: 1em;
@@ -274,7 +274,17 @@ body {
 .btn-group {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-group .btn {
+    flex: 1;
+    min-width: 200px;
+}
+
+.btn-group .btn-secondary {
+    margin-left: 0;
 }
 
 table {
@@ -497,21 +507,109 @@ tr:hover {
 
 .level-card {
     background: #1e2139;
-    padding: 12px;
+    padding: 15px;
     border-radius: 8px;
     border: 2px solid #3a4063;
+    transition: all 0.3s;
+}
+
+.level-card:hover {
+    border-color: #4a9eff;
+    box-shadow: 0 2px 10px rgba(74, 158, 255, 0.2);
 }
 
 .level-card label {
-    font-size: 0.85em;
-    color: #9ca3b8;
-    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: #4a9eff;
+    margin-bottom: 8px;
     display: block;
+    font-weight: 600;
 }
 
-.level-card input {
+.level-card input[type="text"] {
     width: 100%;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #252842;
+    border: 2px solid #3a4063;
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 0.95em;
+    transition: all 0.3s;
+}
+
+.level-card input[type="text"]:focus {
+    border-color: #4a9eff;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
+    outline: none;
+}
+
+.level-card input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    background: #252842;
+    border: 2px solid #3a4063;
+    border-radius: 5px;
+    color: #4a9eff;
+    font-size: 1.1em;
+    font-weight: 600;
+    text-align: right;
+    transition: all 0.3s;
+}
+
+.level-card input[type="number"]:focus {
+    border-color: #4a9eff;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
+    outline: none;
+    background: #2d3250;
+}
+
+.level-card input[type="number"]:hover {
+    background: #2d3250;
+}
+
+.level-card input.number-input {
+    font-family: 'Consolas', 'Monaco', monospace;
+    letter-spacing: 0.5px;
+}
+
+/* Remove number input arrows */
+.level-card input[type="number"]::-webkit-inner-spin-button,
+.level-card input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.level-card input[type="number"] {
+    -webkit-appearance: textfield;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Number input specific styles */
+input.number-input {
+    font-family: 'Consolas', 'Monaco', monospace;
+    letter-spacing: 0.5px;
+}
+
+input.number-input:focus {
+    border-color: #4a9eff !important;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15) !important;
+}
+
+/* Currency suffix effect */
+.level-card {
+    position: relative;
+}
+
+.level-card input[type="text"].number-input::after {
+    content: 'ISK';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c7293;
+    pointer-events: none;
 }
 
 .loading-overlay {
