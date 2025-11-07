@@ -9,7 +9,7 @@ app = Flask(__name__)
 DATA_FILE = 'data.json'
 
 def log_action(action, details=None):
-    """Log actions for security monitoring"""
+    """Log actions"""
     timestamp = datetime.now().isoformat()
     log_entry = {
         'timestamp': timestamp,
@@ -33,7 +33,7 @@ def load_data():
         return {
             'config': {
                 'levelValues': {str(i): i * 100000 for i in range(1, 11)},
-                'levelNames': {str(i): f'Nivel {i}' for i in range(1, 11)},
+                'levelNames': {str(i): f'Sitio {i}' for i in range(1, 11)},
                 'hasSalvager': False,
                 'salvagerPercent': 10,
                 'currency': 'ISK',
