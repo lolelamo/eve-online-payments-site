@@ -127,7 +127,7 @@ def calculate_payments_internal(data):
                     'amount': payment
                 })
     
-    # result
+    # result, bru
     result = {
         'payments': list(payments.values()),
         'totalPaid': sum(p['total'] for p in payments.values()),

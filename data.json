@@ -1,22 +1,69 @@
 {
-  "config": {
-    "levelValues": {},
-    "hasSalvager": false,
-    "salvagerPercent": 10,
-    "currency": "ISK",
-    "autoCalculate": true
-  },
-  "members": [
-    {
-      "name": "asd",
-      "isSalvager": false,
-      "id": 1762439407919
+  "calculations": {
+    "config": {
+      "autoCalculate": true,
+      "currency": "ISK",
+      "hasSalvager": true,
+      "levelNames": {
+        "1": "Core Garrison",
+        "2": "Core Stronghold",
+        "3": "Oruze Osobnyk",
+        "4": "Quarantine Area",
+        "5": "None",
+        "6": "Frontier Barracks",
+        "7": "Frontier Command Post",
+        "8": "Integrated Terminus",
+        "9": "Sleeper Information Sanctum",
+        "10": "None"
+      },
+      "levelValues": {
+        "1": 253000000,
+        "2": 234900000,
+        "3": 164700000,
+        "4": 146900000,
+        "5": 500000,
+        "6": 86700000,
+        "7": 92300000,
+        "8": 55300000,
+        "9": 81800000,
+        "10": 1000000
+      },
+      "salvagerPercent": 10
     },
-    {
-      "name": "ads",
-      "isSalvager": false,
-      "id": 1762439407915
-    }
-  ],
+    "payments": [],
+    "totalPaid": 0,
+    "totalSites": 0
+  },
+  "config": {
+    "autoCalculate": true,
+    "currency": "ISK",
+    "hasSalvager": true,
+    "levelNames": {
+      "1": "Core Garrison",
+      "2": "Core Stronghold",
+      "3": "Oruze Osobnyk",
+      "4": "Quarantine Area",
+      "5": "None",
+      "6": "Frontier Barracks",
+      "7": "Frontier Command Post",
+      "8": "Integrated Terminus",
+      "9": "Sleeper Information Sanctum",
+      "10": "None"
+    },
+    "levelValues": {
+      "1": 253000000,
+      "2": 234900000,
+      "3": 164700000,
+      "4": 146900000,
+      "5": 500000,
+      "6": 86700000,
+      "7": 92300000,
+      "8": 55300000,
+      "9": 81800000,
+      "10": 1000000
+    },
+    "salvagerPercent": 10
+  },
+  "members": [],
   "sites": []
 }
