@@ -188,11 +188,11 @@ function renderLevelValues() {
     for (let i = 1; i <= 10; i++) {
         const div = document.createElement('div');
         div.className = 'level-card';
-        const nameVal = levelNames[i] || `Sitio ${i}`;
+        const nameVal = levelNames[i] || `Nivel ${i}`;
         const amountVal = levelValues[i] || i * 100000;
         div.innerHTML = `
-            <label>Sitio ${i}</label>
-            <input type="text" id="levelName${i}" value="${nameVal}" placeholder="Nombre del Sitio">
+            <label>Nivel ${i}</label>
+            <input type="text" id="levelName${i}" value="${nameVal}" placeholder="Nombre del nivel">
             <input type="number" id="level${i}" value="${amountVal}" min="0" step="10000" placeholder="Valor en ISK">
         `;
         container.appendChild(div);
@@ -210,7 +210,7 @@ function resetLevels() {
     logAction('CONFIG_RESET_LEVELS_CONFIRMED');
     for (let i = 1; i <= 10; i++) {
         document.getElementById(`level${i}`).value = i * 100000;
-        document.getElementById(`levelName${i}`).value = `Sitio ${i}`;
+        document.getElementById(`levelName${i}`).value = `Nivel ${i}`;
     }
     
     showMessage('Valores restaurados a los predeterminados');
@@ -222,9 +222,9 @@ function saveConfig() {
     
     for (let i = 1; i <= 10; i++) {
         appData.config.levelValues[i] = parseInt(document.getElementById(`level${i}`).value) || 0;
-        const ln = (document.getElementById(`levelName${i}`) || { value: `Sitio ${i}` }).value.trim();
+        const ln = (document.getElementById(`levelName${i}`) || { value: `Nivel ${i}` }).value.trim();
         if (!appData.config.levelNames) appData.config.levelNames = {};
-        appData.config.levelNames[i] = ln || `Sitio ${i}`;
+        appData.config.levelNames[i] = ln || `Nivel ${i}`;
     }
     
     appData.config.hasSalvager = document.getElementById('hasSalvager').checked;
@@ -403,7 +403,7 @@ function addSite() {
     
     if (level < 1 || level > 10) {
         logAction('SITE_ADD_VALIDATION_FAILED', { reason: 'invalid_level', level });
-        alert('El Sitio debe estar entre 1 y 10');
+        alert('El nivel debe estar entre 1 y 10');
         return;
     }
     
@@ -501,7 +501,7 @@ function updateSitesList() {
                         return member ? member.name : 'Desconocido';
                     }).join(', ');
                     const levelValue = appData.config.levelValues[s.level] || 0;
-                    const levelName = (appData.config.levelNames && appData.config.levelNames[s.level]) ? appData.config.levelNames[s.level] : `Sitio ${s.level}`;
+                    const levelName = (appData.config.levelNames && appData.config.levelNames[s.level]) ? appData.config.levelNames[s.level] : `Nivel ${s.level}`;
                     const value = `${levelValue.toLocaleString()} ${appData.config.currency || 'ISK'}`;
                     return `
                         <tr>
@@ -693,7 +693,7 @@ function setupEventListeners() {
     document.getElementById('memberForm').addEventListener('submit', addMember);
     
     // Sites
-    document.getElementById('selectAllBtn').addEvent>Listener('click', selectAllParticipants);
+    document.getElementById('selectAllBtn').addEventListener('click', selectAllParticipants);
     document.getElementById('deselectAllBtn').addEventListener('click', deselectAllParticipants);
     document.getElementById('addSiteBtn').addEventListener('click', addSite);
     document.getElementById('clearSiteFormBtn').addEventListener('click', clearSiteForm);
@@ -705,8 +705,6 @@ function setupEventListeners() {
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
     logAction('APP_INITIALIZATION_START');
-    console.log('%c SECURITY LOG ENABLED ', 'color: #ff6b6b; font-size: 16px; font-weight: bold;');
-    console.log('%cTodas las acciones del usuario están siendo registradas para seguridad.', 'color: #ffc107; font-size: 12px;');
     
     setupEventListeners();
     loadData();
