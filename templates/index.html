@@ -3,10 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de repartición Pagos EVE Online</title>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="referrer" content="no-referrer">
+    <title>Sistema de Pagos EVE Online</title>
     <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
+    <!-- Floating shapes for background animation -->
+    <div class="floating-shape shape-1"></div>
+    <div class="floating-shape shape-2"></div>
+    <div class="floating-shape shape-3"></div>
+    
+    <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
             <div class="spinner"></div>
@@ -14,11 +22,23 @@
         </div>
     </div>
 
+    <!-- Error Modal (FIXED - was missing) -->
+    <div class="error-modal" id="errorModal">
+        <div class="error-modal-content">
+            <div class="error-modal-header">
+                <h2>⚠️ Error</h2>
+                <button class="error-modal-close" title="Cerrar">&times;</button>
+            </div>
+            <div class="error-modal-body">
+                <!-- Content filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>Sistema de Pagos EVE Online</h1>
             <p>Gestión automática de distribución de ISK por sitios</p>
-            <p>Hecho por lolewe</p>
             <div class="header-badges">
                 <div class="badge active" id="autoCalcIndicator">
                     Cálculo Automático
@@ -48,19 +68,36 @@
                 <!-- TAB 1: CONFIGURATION -->
                 <div id="config" class="tab-content active">
                     <div class="section">
-                        <h2>Valores por Sitio </h2>
+                        <h2>⚙️ Valores por Nivel de Sitio</h2>
                         <div class="alert">
-                            <strong>Consejo:</strong> Define cuánto ISK vale cada Sitio (1-10).
+                            <strong>💡 Consejo:</strong> Define cuánto ISK vale cada nivel de sitio (1-10).
                         </div>
+                        
+                        <!-- Number Format Selector (FIXED) -->
+                        <div style="margin-bottom: 25px;">
+                            <h3 style="color: #b0b8d4; margin-bottom: 12px; font-size: 1em;">Formato de Números:</h3>
+                            <div class="format-selector">
+                                <button class="format-option active" data-format="comma" onclick="setNumberFormat('comma'); return false;">
+                                    1,000,000
+                                </button>
+                                <button class="format-option" data-format="space" onclick="setNumberFormat('space'); return false;">
+                                    1 000 000
+                                </button>
+                                <button class="format-option" data-format="dot" onclick="setNumberFormat('dot'); return false;">
+                                    1.000.000
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div class="level-grid" id="levelValues"></div>
                         <div class="btn-group">
                             <button class="btn" id="saveConfigBtn">💾 Guardar Configuración</button>
-                            <button class="btn btn-secondary" id="resetLevelsBtn">Restaurar Valores por Defecto</button>
+                            <button class="btn btn-secondary" id="resetLevelsBtn">🔄 Restaurar Valores por Defecto</button>
                         </div>
                     </div>
                     
                     <div class="section">
-                        <h2> Configuración de Salvager</h2>
+                        <h2>⭐ Configuración de Salvager</h2>
                         <div class="input-field">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="hasSalvager">
@@ -70,12 +107,12 @@
                         <div class="input-field" style="margin-top: 15px;">
                             <label>Porcentaje del salvager (%)</label>
                             <input type="number" id="salvagerPercent" value="10" min="0" max="100" disabled>
-                            <small style="color: #ccc; margin-top: 5px;">Este porcentaje se distribuye entre todos los salvagers</small>
+                            <small style="color: #ccc; margin-top: 5px;">Este porcentaje se distribuye entre todos los salvagers presentes</small>
                         </div>
                     </div>
                     
                     <div class="section">
-                        <h2>Opciones Generales</h2>
+                        <h2>🔧 Opciones Generales</h2>
                         <div class="input-field">
                             <label>Moneda</label>
                             <input type="text" id="currency" value="ISK" placeholder="ISK">
@@ -89,10 +126,10 @@
                     </div>
                     
                     <div class="section">
-                        <h2>Importar/Exportar Datos</h2>
+                        <h2>📥 Importar/Exportar Datos</h2>
                         <div class="btn-group">
-                            <button class="btn" id="exportBtn">Exportar Datos</button>
-                            <button class="btn btn-secondary" id="importBtn">Importar Datos</button>
+                            <button class="btn" id="exportBtn">📤 Exportar Datos</button>
+                            <button class="btn btn-secondary" id="importBtn">📥 Importar Datos</button>
                             <input type="file" id="importFile" accept=".json" style="display: none;">
                         </div>
                     </div>
@@ -139,28 +176,28 @@
                                 <input type="text" id="siteName" placeholder="Ej: Sanctum #1">
                             </div>
                             <div class="input-field">
-                                <label>Sitio (1-10)</label>
+                                <label>Nivel (1-10)</label>
                                 <input type="number" id="siteLevel" min="1" max="10" value="1">
                             </div>
                         </div>
                         
                         <h3>Participantes</h3>
                         <div class="select-all-controls">
-                            <button class="btn btn-secondary" id="selectAllBtn">Seleccionar Todos</button>
-                            <button class="btn btn-secondary" id="deselectAllBtn">Deseleccionar Todos</button>
+                            <button class="btn btn-secondary" id="selectAllBtn" type="button">Seleccionar Todos</button>
+                            <button class="btn btn-secondary" id="deselectAllBtn" type="button">Deseleccionar Todos</button>
                         </div>
                         <div class="participant-grid" id="participantCheckboxes"></div>
                         
                         <div class="btn-group">
-                            <button class="btn" id="addSiteBtn">Registrar Sitio</button>
-                            <button class="btn btn-secondary" id="clearSiteFormBtn">Limpiar Formulario</button>
+                            <button class="btn" id="addSiteBtn" type="button">Registrar Sitio</button>
+                            <button class="btn btn-secondary" id="clearSiteFormBtn" type="button">Limpiar Formulario</button>
                         </div>
                     </div>
                     
                     <div class="section">
                         <h2>Sitios Registrados (<span id="siteCount">0</span>)</h2>
                         <div class="quick-actions">
-                            <button class="btn btn-danger" id="clearAllSitesBtn">Limpiar Todos los Sitios</button>
+                            <button class="btn btn-danger" id="clearAllSitesBtn" type="button">Limpiar Todos los Sitios</button>
                         </div>
                         <div id="sitesList"></div>
                     </div>

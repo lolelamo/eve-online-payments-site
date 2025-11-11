@@ -5,7 +5,8 @@ let appData = {
         hasSalvager: false,
         salvagerPercent: 10,
         currency: 'ISK',
-        autoCalculate: true
+        autoCalculate: true,
+        numberFormat: 'comma'
     },
     members: [],
     sites: []
@@ -13,6 +14,16 @@ let appData = {
 
 let calculations = null;
 let saveTimeout = null;
+let csrfToken = null;
+
+// Generate UUID for member IDs (fixes collision risk)
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
 // Security logging
 function logAction(action, details = {}) {
@@ -27,6 +38,22 @@ function logAction(action, details = {}) {
     console.log('[SECURITY LOG]', JSON.stringify(logEntry, null, 2));
 }
 
+// Format number display based on user preference
+function formatNumber(num, format = null) {
+    const fmt = format || appData.config.numberFormat || 'comma';
+    const num_int = Math.round(num);
+    
+    if (fmt === 'space') return num_int.toLocaleString('de-DE');
+    if (fmt === 'dot') return num_int.toLocaleString('it-IT');
+    return num_int.toLocaleString('en-US');
+}
+
+// Parse formatted number back to integer
+function parseFormattedNumber(str) {
+    if (!str) return 0;
+    return parseInt(str.replace(/[^\d]/g, '')) || 0;
+}
+
 // Show loading overlay
 function showLoading() {
     logAction('UI_LOADING_SHOW');
@@ -37,6 +64,45 @@ function showLoading() {
 function hideLoading() {
     logAction('UI_LOADING_HIDE');
     document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// Show error modal (FIXED - was missing)
+function showErrorModal(error, context = {}) {
+    logAction('UI_ERROR_MODAL_SHOW', { error: error.message, context });
+    
+    const modal = document.getElementById('errorModal');
+    if (!modal) {
+        // Fallback if modal doesn't exist
+        console.error('Error:', error.message);
+        showMessage(error.message, 'error');
+        return;
+    }
+    
+    const header = modal.querySelector('.error-modal-header h2');
+    const body = modal.querySelector('.error-modal-body');
+    
+    header.textContent = 'Error Loading Data';
+    body.innerHTML = `
+        <div class="error-message-text">
+            <strong>Error:</strong> ${error.message}
+        </div>
+        <div class="error-details">
+            <h3>Context Information:</h3>
+            <div class="error-code">${JSON.stringify(context, null, 2)}</div>
+        </div>
+        <div class="error-actions">
+            <button class="btn" onclick="location.reload()">Retry</button>
+            <button class="btn btn-secondary" onclick="closeErrorModal()">Continue Anyway</button>
+        </div>
+    `;
+    
+    modal.classList.add('active');
+}
+
+function closeErrorModal() {
+    const modal = document.getElementById('errorModal');
+    if (modal) modal.classList.remove('active');
+    renderAll();
 }
 
 // Show message to user
@@ -69,17 +135,40 @@ function updateDataStatus(status = 'saved') {
     }
 }
 
-// Load data from server
+// Load CSRF token
+async function loadCSRFToken() {
+    try {
+        const response = await fetch('/api/csrf-token');
+        const data = await response.json();
+        csrfToken = data.csrf_token;
+    } catch (error) {
+        console.error('Error loading CSRF token:', error);
+    }
+}
+
+// Load data from server (FIXED - handles new users)
 async function loadData() {
     logAction('DATA_LOAD_START');
     showLoading();
     try {
         const response = await fetch('/api/data');
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
         const data = await response.json();
-        logAction('DATA_LOAD_SUCCESS', { memberCount: data.members?.length, siteCount: data.sites?.length });
+        
+        console.log('[DEBUG] Data loaded from server:', data);
+        console.log('[DEBUG] Config:', data.config);
+        console.log('[DEBUG] Level Values:', data.config?.levelValues);
+        
+        logAction('DATA_LOAD_SUCCESS', { 
+            memberCount: data.members?.length, 
+            siteCount: data.sites?.length,
+            hasConfig: !!data.config,
+            hasLevelValues: !!data.config?.levelValues
+        });
+        
         appData = data;
         calculations = data.calculations || null;
         renderAll();
@@ -87,14 +176,17 @@ async function loadData() {
         hideLoading();
     } catch (error) {
         logAction('DATA_LOAD_ERROR', { error: error.message });
-        console.error('Error cargando datos:', error);
-        renderAll();
+        console.error('Error loading data:', error);
         hideLoading();
-        showMessage('Error al cargar datos. Usando valores por defecto.', 'error');
+        
+        showErrorModal(error, {
+            action: 'LOAD_DATA',
+            endpoint: '/api/data'
+        });
     }
 }
 
-// Save data to server with debouncing
+// Save data to server with debouncing (FIXED - includes CSRF token)
 async function saveData() {
     logAction('DATA_SAVE_TRIGGERED');
     updateDataStatus('saving');
@@ -111,7 +203,8 @@ async function saveData() {
             const response = await fetch('/api/data', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
                 },
                 body: JSON.stringify(appData)
             });
@@ -130,8 +223,9 @@ async function saveData() {
             updateDataStatus('saved');
         } catch (error) {
             logAction('DATA_SAVE_ERROR', { error: error.message });
-            console.error('Error guardando datos:', error);
+            console.error('Error saving data:', error);
             showMessage('Error al guardar datos', 'error');
+            updateDataStatus('error');
         }
     }, 500);
 }
@@ -150,6 +244,16 @@ function renderAll() {
     document.getElementById('salvagerPercent').value = config.salvagerPercent || 10;
     document.getElementById('currency').value = config.currency || 'ISK';
     document.getElementById('autoCalculate').checked = config.autoCalculate !== false;
+    
+    // Set format selector
+    const format = config.numberFormat || 'comma';
+    document.querySelectorAll('.format-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    const formatOption = document.querySelector(`.format-option[data-format="${format}"]`);
+    if (formatOption) {
+        formatOption.classList.add('active');
+    }
     
     updateSalvagerSettings();
     updateAutoCalcIndicator();
@@ -182,21 +286,80 @@ function renderLevelValues() {
     logAction('UI_RENDER_LEVEL_VALUES');
     const container = document.getElementById('levelValues');
     container.innerHTML = '';
-    const levelValues = appData.config.levelValues || {};
-    const levelNames = appData.config.levelNames || {};
+    
+    if (!appData.config.levelValues) {
+        appData.config.levelValues = {};
+    }
+    if (!appData.config.levelNames) {
+        appData.config.levelNames = {};
+    }
+    
+    const levelValues = appData.config.levelValues;
+    const levelNames = appData.config.levelNames;
     
     for (let i = 1; i <= 10; i++) {
         const div = document.createElement('div');
         div.className = 'level-card';
-        const nameVal = levelNames[i] || `Sitio ${i}`;
-        const amountVal = levelValues[i] || i * 100000;
+        
+        const nameVal = levelNames[i] || levelNames[String(i)] || `Sitio ${i}`;
+        const amountVal = levelValues[i] || levelValues[String(i)] || 0;
+        const formattedAmount = formatNumber(amountVal);
+        
         div.innerHTML = `
-            <label></label>
-            <input type="text" id="levelName${i}" value="${nameVal}" placeholder="Nombre del Sitio">
-            <input type="number" id="level${i}" value="${amountVal}" min="0" step="10000" placeholder="Valor en ISK">
+            <label>NIVEL ${i}</label>
+            <input type="text" 
+                   id="levelName${i}" 
+                   value="${nameVal}" 
+                   placeholder="Nombre del Sitio"
+                   autocomplete="off">
+            <input type="text" 
+                   id="level${i}" 
+                   value="${formattedAmount}" 
+                   placeholder="Valor en ISK"
+                   class="number-input"
+                   autocomplete="off"
+                   data-raw-value="${amountVal}">
         `;
         container.appendChild(div);
+        
+        const input = document.getElementById(`level${i}`);
+        input.addEventListener('input', handleNumberInput);
+        input.addEventListener('blur', handleNumberBlur);
+        input.addEventListener('focus', handleNumberFocus);
     }
+    
+    console.log('[DEBUG] Level values rendered:', levelValues);
+}
+
+// Handle number input with formatting
+function handleNumberInput(e) {
+    const input = e.target;
+    let value = input.value;
+    
+    value = value.replace(/[^\d]/g, '');
+    input.dataset.rawValue = value;
+    
+    if (value) {
+        input.value = formatNumber(value);
+    }
+}
+
+// Handle blur - ensure formatting
+function handleNumberBlur(e) {
+    const input = e.target;
+    const rawValue = input.dataset.rawValue || '0';
+    
+    if (rawValue === '' || rawValue === '0') {
+        input.value = '0';
+        input.dataset.rawValue = '0';
+    } else {
+        input.value = formatNumber(rawValue);
+    }
+}
+
+// Handle focus - select all for easy editing
+function handleNumberFocus(e) {
+    e.target.select();
 }
 
 // Reset levels to default values
@@ -209,7 +372,10 @@ function resetLevels() {
     
     logAction('CONFIG_RESET_LEVELS_CONFIRMED');
     for (let i = 1; i <= 10; i++) {
-        document.getElementById(`level${i}`).value = i * 100000;
+        const defaultValue = i * 100000;
+        const input = document.getElementById(`level${i}`);
+        input.value = formatNumber(defaultValue);
+        input.dataset.rawValue = defaultValue.toString();
         document.getElementById(`levelName${i}`).value = `Sitio ${i}`;
     }
     
@@ -220,11 +386,24 @@ function resetLevels() {
 function saveConfig() {
     logAction('CONFIG_SAVE_START');
     
+    if (!appData.config.levelNames) appData.config.levelNames = {};
+    if (!appData.config.levelValues) appData.config.levelValues = {};
+    
     for (let i = 1; i <= 10; i++) {
-        appData.config.levelValues[i] = parseInt(document.getElementById(`level${i}`).value) || 0;
-        const ln = (document.getElementById(`levelName${i}`) || { value: `Sitio ${i}` }).value.trim();
-        if (!appData.config.levelNames) appData.config.levelNames = {};
-        appData.config.levelNames[i] = ln || `Sitio ${i}`;
+        const levelInput = document.getElementById(`level${i}`);
+        const levelValue = parseFormattedNumber(levelInput.dataset.rawValue || levelInput.value);
+        const levelName = (document.getElementById(`levelName${i}`) || { value: `Sitio ${i}` }).value.trim() || `Sitio ${i}`;
+        
+        // Validate level value (FIXED)
+        if (levelValue < 0 || levelValue > 999999999999) {
+            showMessage(`Valor de nivel ${i} inválido`, 'error');
+            return;
+        }
+        
+        appData.config.levelValues[i] = levelValue;
+        appData.config.levelValues[String(i)] = levelValue;
+        appData.config.levelNames[i] = levelName;
+        appData.config.levelNames[String(i)] = levelName;
     }
     
     appData.config.hasSalvager = document.getElementById('hasSalvager').checked;
@@ -271,7 +450,7 @@ function checkMembersExist() {
     }
 }
 
-// Add member(s)
+// Add member(s) (FIXED - uses UUID for ID)
 function addMember(evt) {
     evt.preventDefault();
     logAction('MEMBER_ADD_ATTEMPT');
@@ -293,7 +472,7 @@ function addMember(evt) {
         appData.members.push({ 
             name: n, 
             isSalvager, 
-            id: Date.now() + Math.floor(Math.random()*1000) 
+            id: generateUUID()  // FIXED: UUID instead of Date.now()
         });
     });
     
@@ -346,7 +525,7 @@ function updateMembersList() {
                 ${m.isSalvager ? '<span class="salvager-tag">SALVAGER</span>' : ''}
             </div>
             <div class="member-controls">
-                <button class="btn btn-danger" onclick="removeMember(${m.id})">Eliminar</button>
+                <button class="btn btn-danger" onclick="removeMember('${m.id}')">Eliminar</button>
             </div>
         </div>
     `).join('');
@@ -363,7 +542,7 @@ function updateParticipantCheckboxes() {
     container.innerHTML = appData.members.map(m => `
         <label class="checkbox-label">
             <input type="checkbox" value="${m.id}" class="participant-check">
-            <span>${m.name}${m.isSalvager ? ' ⭐' : ''}</span>
+            <span>${m.name}${m.isSalvager ? 'Salvager' : ''}</span>
         </label>
     `).join('');
 }
@@ -403,12 +582,12 @@ function addSite() {
     
     if (level < 1 || level > 10) {
         logAction('SITE_ADD_VALIDATION_FAILED', { reason: 'invalid_level', level });
-        alert('El Sitio debe estar entre 1 y 10');
+        alert('El nivel debe estar entre 1 y 10');
         return;
     }
     
     const participantIds = Array.from(document.querySelectorAll('.participant-check:checked'))
-        .map(cb => parseInt(cb.value));
+        .map(cb => cb.value);
     
     if (participantIds.length === 0) {
         logAction('SITE_ADD_VALIDATION_FAILED', { reason: 'no_participants' });
@@ -472,7 +651,7 @@ function clearAllSites() {
     showMessage('Todos los sitios han sido eliminados');
 }
 
-// Update sites list UI
+// Update sites list UI (FIXED - uses formatNumber for display)
 function updateSitesList() {
     const container = document.getElementById('sitesList');
     const totalSites = appData.sites.length;
@@ -501,8 +680,8 @@ function updateSitesList() {
                         return member ? member.name : 'Desconocido';
                     }).join(', ');
                     const levelValue = appData.config.levelValues[s.level] || 0;
-                    const levelName = (appData.config.levelNames && appData.config.levelNames[s.level]) ? appData.config.levelNames[s.level] : `Sitio ${s.level}`;
-                    const value = `${levelValue.toLocaleString()} ${appData.config.currency || 'ISK'}`;
+                    const levelName = (appData.config.levelNames && appData.config.levelNames[s.level]) ? appData.config.levelNames[s.level] : `Nivel ${s.level}`;
+                    const value = `${formatNumber(levelValue)} ${appData.config.currency || 'ISK'}`;
                     return `
                         <tr>
                             <td><strong>${s.name}</strong></td>
@@ -518,7 +697,7 @@ function updateSitesList() {
     `;
 }
 
-// Update payments display
+// Update payments display (FIXED - uses formatNumber)
 function updatePaymentsDisplay() {
     const currency = appData.config.currency || 'ISK';
     
@@ -530,11 +709,11 @@ function updatePaymentsDisplay() {
         return;
     }
     
-    document.getElementById('totalPaid').textContent = Math.round(calculations.totalPaid).toLocaleString() + ' ' + currency;
+    document.getElementById('totalPaid').textContent = formatNumber(calculations.totalPaid) + ' ' + currency;
     document.getElementById('totalSites').textContent = calculations.totalSites || 0;
     
     const avgPerSite = calculations.totalSites > 0 ? calculations.totalPaid / calculations.totalSites : 0;
-    document.getElementById('avgPerSite').textContent = Math.round(avgPerSite).toLocaleString() + ' ' + currency;
+    document.getElementById('avgPerSite').textContent = formatNumber(avgPerSite) + ' ' + currency;
     
     const paymentsList = document.getElementById('paymentsList');
     if (calculations.payments.length === 0) {
@@ -542,14 +721,13 @@ function updatePaymentsDisplay() {
         return;
     }
     
-    // Sort by total descending
     const sortedPayments = [...calculations.payments].sort((a, b) => b.total - a.total);
     
     paymentsList.innerHTML = sortedPayments.map(p => `
         <div class="payment-item ${p.isSalvager ? 'salvager' : ''}">
-            <div class="payment-name">${p.name}${p.isSalvager ? ' ⭐' : ''}</div>
+            <div class="payment-name">${p.name}${p.isSalvager ? 'Salvager' : ''}</div>
             <div style="color: #9ca3b8; font-size: 0.85em;">${p.sitesCount} sitio(s)</div>
-            <div class="payment-amount">${Math.round(p.total).toLocaleString()} ${currency}</div>
+            <div class="payment-amount">${formatNumber(p.total)} ${currency}</div>
         </div>
     `).join('');
 }
@@ -582,7 +760,7 @@ async function exportData() {
         showMessage('Datos exportados correctamente');
     } catch (error) {
         logAction('DATA_EXPORT_ERROR', { error: error.message });
-        console.error('Error exportando datos:', error);
+        console.error('Error exporting data:', error);
         showMessage('Error al exportar datos', 'error');
     }
 }
@@ -622,7 +800,6 @@ function handleFileImport(event) {
             const importedData = JSON.parse(e.target.result);
             logAction('DATA_IMPORT_PARSE_SUCCESS');
             
-            // Validate imported data structure
             if (!importedData.config || !importedData.members || !importedData.sites) {
                 throw new Error('Estructura de datos inválida');
             }
@@ -637,12 +814,10 @@ function handleFileImport(event) {
                 siteCount: importedData.sites.length
             });
             
-            // Update app data
             appData.config = importedData.config;
             appData.members = importedData.members;
             appData.sites = importedData.sites;
             
-            // Save and re-render
             saveData();
             renderAll();
             showMessage('Datos importados correctamente');
@@ -650,7 +825,7 @@ function handleFileImport(event) {
             logAction('DATA_IMPORT_SUCCESS');
         } catch (error) {
             logAction('DATA_IMPORT_ERROR', { error: error.message });
-            console.error('Error importando datos:', error);
+            console.error('Error importing data:', error);
             alert('Error al importar datos: ' + error.message);
         }
     };
@@ -661,9 +836,24 @@ function handleFileImport(event) {
     };
     
     reader.readAsText(file);
-    
-    // Reset input
     event.target.value = '';
+}
+
+// Set number format
+function setNumberFormat(format) {
+    logAction('CONFIG_SET_NUMBER_FORMAT', { format });
+    appData.config.numberFormat = format;
+    
+    document.querySelectorAll('.format-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    document.querySelector(`.format-option[data-format="${format}"]`).classList.add('active');
+    
+    renderLevelValues();
+    updateSitesList();
+    updatePaymentsDisplay();
+    saveData();
+    showMessage('Formato de números actualizado');
 }
 
 // Set up all event listeners
@@ -689,6 +879,13 @@ function setupEventListeners() {
     document.getElementById('importBtn').addEventListener('click', importData);
     document.getElementById('importFile').addEventListener('change', handleFileImport);
     
+    // Number format options
+    document.querySelectorAll('.format-option').forEach(opt => {
+        opt.addEventListener('click', function() {
+            setNumberFormat(this.getAttribute('data-format'));
+        });
+    });
+    
     // Members
     document.getElementById('memberForm').addEventListener('submit', addMember);
     
@@ -699,15 +896,25 @@ function setupEventListeners() {
     document.getElementById('clearSiteFormBtn').addEventListener('click', clearSiteForm);
     document.getElementById('clearAllSitesBtn').addEventListener('click', clearAllSites);
     
+    // Error modal close button
+    const errorModal = document.getElementById('errorModal');
+    if (errorModal) {
+        const closeBtn = errorModal.querySelector('.error-modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeErrorModal);
+        }
+        errorModal.addEventListener('click', function(e) {
+            if (e.target === this) closeErrorModal();
+        });
+    }
+    
     logAction('EVENT_LISTENERS_SETUP_COMPLETE');
 }
 
 // Initialize application
-document.addEventListener('DOMContentLoaded', function() {
-    logAction('APP_INITIALIZATION_START');
-    console.log('%c⚠️ SECURITY LOG ENABLED ⚠️', 'color: #ff6b6b; font-size: 16px; font-weight: bold;');
-    console.log('%cTodas las acciones del usuario están siendo registradas para seguridad.', 'color: #ffc107; font-size: 12px;');
-    
+document.addEventListener('DOMContentLoaded', async function() {
+    logAction('APP_INITIALIZATION_START');    
+    await loadCSRFToken();
     setupEventListeners();
     loadData();
     
