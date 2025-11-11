@@ -557,7 +557,7 @@ def internal_error(error):
 init_db()
 
 if __name__ == '__main__':
-    print("EVE Online Payments - Fixed Version")
-    print("Version 2.0.0 (Security Hardened)")
+    print("EVE Online Payments")
+    print("Version 1.1.0")
     print("https://github.com/lolelamo/eve-online-payments-site")
     app.run(debug=False)
