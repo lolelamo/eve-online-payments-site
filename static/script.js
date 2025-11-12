@@ -542,7 +542,7 @@ function updateParticipantCheckboxes() {
     container.innerHTML = appData.members.map(m => `
         <label class="checkbox-label">
             <input type="checkbox" value="${m.id}" class="participant-check">
-            <span>${m.name}${m.isSalvager ? 'Salvager' : ''}</span>
+            <span>${m.name}${m.isSalvager ? ' ⭐' : ''}</span>
         </label>
     `).join('');
 }
@@ -725,7 +725,7 @@ function updatePaymentsDisplay() {
     
     paymentsList.innerHTML = sortedPayments.map(p => `
         <div class="payment-item ${p.isSalvager ? 'salvager' : ''}">
-            <div class="payment-name">${p.name}${p.isSalvager ? 'Salvager' : ''}</div>
+            <div class="payment-name">${p.name}${p.isSalvager ? ' ⭐' : ''}</div>
             <div style="color: #9ca3b8; font-size: 0.85em;">${p.sitesCount} sitio(s)</div>
             <div class="payment-amount">${formatNumber(p.total)} ${currency}</div>
         </div>
@@ -913,10 +913,21 @@ function setupEventListeners() {
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
-    logAction('APP_INITIALIZATION_START');    
+    logAction('APP_INITIALIZATION_START');
+    console.log('%c⚠️ SECURITY LOG ENABLED ⚠️', 'color: #ff6b6b; font-size: 16px; font-weight: bold;');
+    console.log('%cTodas las acciones del usuario están siendo registradas para seguridad.', 'color: #ffc107; font-size: 12px;');
+    
     await loadCSRFToken();
     setupEventListeners();
     loadData();
+    
+    // Force payment display update after load
+    setTimeout(() => {
+        if (calculations) {
+            console.log('[DEBUG] Calculating payments on load:', calculations);
+            updatePaymentsDisplay();
+        }
+    }, 500);
     
     logAction('APP_INITIALIZATION_COMPLETE');
 });
